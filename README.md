@@ -11,7 +11,6 @@ This project allows users to:
 - Track available stock in real time
 - Prevent overselling of inventory
 
----
 
 # Tech Stack
 
@@ -21,8 +20,6 @@ This project allows users to:
 - PostgreSQL
 - Neon Database
 - REST APIs
-
----
 
 # Features
 
@@ -47,7 +44,6 @@ The system automatically:
 - Updates available stock
 - Prevents overbooking
 
----
 
 # Project Structure
 
@@ -78,7 +74,6 @@ prisma/
  └── seed.ts
 ```
 
----
 
 # API Endpoints
 
@@ -90,7 +85,6 @@ GET /api/products
 
 Returns all inventory data.
 
----
 
 ## Create Reservation
 
@@ -108,7 +102,6 @@ POST /api/reservations
 }
 ```
 
----
 
 ## Confirm Reservation
 
@@ -116,7 +109,6 @@ POST /api/reservations
 POST /api/reservations/:id/confirm
 ```
 
----
 
 ## Cancel Reservation
 
@@ -124,7 +116,6 @@ POST /api/reservations/:id/confirm
 POST /api/reservations/:id/release
 ```
 
----
 
 # Database Schema
 
@@ -137,8 +128,6 @@ Main models:
 - Inventory
 - Reservation
 
----
-
 # Getting Started
 
 ## 1. Clone Repository
@@ -148,15 +137,11 @@ git clone <your-repo-url>
 cd inventory-reservation-system
 ```
 
----
-
 ## 2. Install Dependencies
 
 ```bash
 npm install
 ```
-
----
 
 ## 3. Setup Environment Variables
 
@@ -166,7 +151,6 @@ Create a `.env` file:
 DATABASE_URL="your_database_url"
 ```
 
----
 
 ## 4. Run Prisma Migration
 
@@ -174,15 +158,12 @@ DATABASE_URL="your_database_url"
 npx prisma migrate dev
 ```
 
----
 
 ## 5. Seed Database
 
 ```bash
 npx tsx prisma/seed.ts
 ```
-
----
 
 ## 6. Start Development Server
 
@@ -195,8 +176,6 @@ Open:
 ```txt
 http://localhost:3000
 ```
-
----
 
 
 
