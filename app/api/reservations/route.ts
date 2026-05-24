@@ -12,67 +12,80 @@ export async function POST(request: Request) {
       quantity,
     } = body;
 
-    const inventory =
-      await prisma.inventory.findFirst({
-        where: {
-          productId,
-          warehouseId,
-        },
-      });
-
-    if (!inventory) {
-
-      return Response.json(
-        { error: "Inventory not found" },
-        { status: 404 }
-      );
-    }
-
-    const availableStock =
-      inventory.totalStock -
-      inventory.reservedStock;
-
-    if (availableStock < quantity) {
-
-      return Response.json(
-        { error: "Not enough stock" },
-        { status: 400 }
-      );
-    }
-
-    await prisma.inventory.update({
-      where: {
-        id: inventory.id,
-      },
-      data: {
-        reservedStock: {
-          increment: quantity,
-        },
-      },
-    });
-
     const reservation =
-      await prisma.reservation.create({
-        data: {
-          productId,
-          warehouseId,
-          quantity,
-          status: "pending",
-          expiresAt: new Date(
-            Date.now() + 10 * 60 * 1000
-          ),
-        },
+      await prisma.$transaction(async (tx) => {
+
+        const inventory =
+          await tx.inventory.findFirst({
+            where: {
+              productId,
+              warehouseId,
+            },
+          });
+
+        if (!inventory) {
+
+          throw new Error("Inventory not found");
+        }
+
+        const availableStock =
+          inventory.totalStock -
+          inventory.reservedStock;
+
+        if (availableStock < quantity) {
+
+          throw new Error("Not enough stock");
+        }
+
+        const updatedInventory =
+          await tx.inventory.updateMany({
+            where: {
+              id: inventory.id,
+              reservedStock: inventory.reservedStock,
+            },
+            data: {
+              reservedStock: {
+                increment: quantity,
+              },
+            },
+          });
+
+        if (updatedInventory.count === 0) {
+
+          throw new Error(
+            "Race condition detected. Try again."
+          );
+        }
+
+        const reservation =
+          await tx.reservation.create({
+            data: {
+              productId,
+              warehouseId,
+              quantity,
+              status: "pending",
+              expiresAt: new Date(
+                Date.now() + 10 * 60 * 1000
+              ),
+            },
+          });
+
+        return reservation;
       });
 
     return Response.json(reservation);
 
   } catch (error) {
 
-    console.log(error);
+    const err = error as Error;
 
     return Response.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+      {
+        error: err.message || "Something went wrong",
+      },
+      {
+        status: 400,
+      }
     );
   }
 }
