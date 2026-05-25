@@ -4,15 +4,14 @@ const prisma = new PrismaClient();
 
 async function main() {
 
-  // DELETE OLD DATA
+  // CLEAN OLD DATA
 
-  await prisma.reservation.deleteMany();
-
-  await prisma.inventory.deleteMany();
-
-  await prisma.product.deleteMany();
-
-  await prisma.warehouse.deleteMany();
+  await prisma.$transaction([
+    prisma.reservation.deleteMany(),
+    prisma.inventory.deleteMany(),
+    prisma.product.deleteMany(),
+    prisma.warehouse.deleteMany(),
+  ]);
 
   // CREATE WAREHOUSES
 
@@ -67,12 +66,13 @@ async function main() {
     ],
   });
 
-  console.log("Seed data inserted");
+  console.log("✅ Seed data inserted");
 }
 
 main()
   .catch((e) => {
     console.error(e);
+    process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();

@@ -1,15 +1,26 @@
 import ReserveButton from "@/components/ReserveButton";
 
+export const dynamic = 'force-dynamic';
+
+import { prisma } from "../lib/prisma";
+
 async function getProducts() {
+  const inventories = await prisma.inventory.findMany({
+    include: {
+      product: true,
+      warehouse: true,
+    },
+  });
 
-  const res = await fetch(
-    "http://localhost:3000/api/products",
-    {
-      cache: "no-store",
-    }
-  );
-
-  return res.json();
+  return inventories.map((item) => ({
+    productId: item.productId,
+    warehouseId: item.warehouseId,
+    product: item.product.name,
+    warehouse: item.warehouse.name,
+    totalStock: item.totalStock,
+    reservedStock: item.reservedStock,
+    availableStock: item.totalStock - item.reservedStock,
+  }));
 }
 
 export default async function Home() {

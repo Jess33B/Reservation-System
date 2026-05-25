@@ -33,7 +33,7 @@ export default function ReserveButton({
       setMessage("");
 
       const response = await fetch(
-        "http://localhost:3000/api/reservations",
+        "/api/reservations",
         {
           method: "POST",
           headers: {
@@ -81,7 +81,7 @@ export default function ReserveButton({
     try {
 
       const response = await fetch(
-        `http://localhost:3000/api/reservations/${reservationId}/confirm`,
+        `/api/reservations/${reservationId}/confirm`,
         {
           method: "POST",
         }
@@ -113,7 +113,7 @@ export default function ReserveButton({
     try {
 
       const response = await fetch(
-        `http://localhost:3000/api/reservations/${reservationId}/release`,
+        `/api/reservations/${reservationId}/release`,
         {
           method: "POST",
         }

@@ -1,6 +1,10 @@
+import { NextRequest, NextResponse } from "next/server";
+
 import { prisma } from "@/lib/prisma";
 
-export async function POST(request: Request) {
+export async function POST(
+  request: NextRequest
+) {
 
   try {
 
@@ -12,8 +16,30 @@ export async function POST(request: Request) {
       quantity,
     } = body;
 
+    // VALIDATION
+
+    if (
+      !productId ||
+      !warehouseId ||
+      !quantity
+    ) {
+
+      return NextResponse.json(
+        {
+          error: "Missing required fields",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // TRANSACTION
+
     const reservation =
       await prisma.$transaction(async (tx) => {
+
+        // FIND INVENTORY
 
         const inventory =
           await tx.inventory.findFirst({
@@ -25,24 +51,37 @@ export async function POST(request: Request) {
 
         if (!inventory) {
 
-          throw new Error("Inventory not found");
+          throw new Error(
+            "INVENTORY_NOT_FOUND"
+          );
         }
+
+        // AVAILABLE STOCK
 
         const availableStock =
           inventory.totalStock -
           inventory.reservedStock;
 
-        if (availableStock < quantity) {
+        if (
+          availableStock < quantity
+        ) {
 
-          throw new Error("Not enough stock");
+          throw new Error(
+            "OUT_OF_STOCK"
+          );
         }
+
+        // CONCURRENCY SAFE UPDATE
 
         const updatedInventory =
           await tx.inventory.updateMany({
             where: {
               id: inventory.id,
-              reservedStock: inventory.reservedStock,
+
+              reservedStock:
+                inventory.reservedStock,
             },
+
             data: {
               reservedStock: {
                 increment: quantity,
@@ -50,12 +89,18 @@ export async function POST(request: Request) {
             },
           });
 
-        if (updatedInventory.count === 0) {
+        // RACE CONDITION CHECK
+
+        if (
+          updatedInventory.count === 0
+        ) {
 
           throw new Error(
-            "Race condition detected. Try again."
+            "RACE_CONDITION"
           );
         }
+
+        // CREATE RESERVATION
 
         const reservation =
           await tx.reservation.create({
@@ -63,9 +108,12 @@ export async function POST(request: Request) {
               productId,
               warehouseId,
               quantity,
-              status: "pending",
+
+              status: "PENDING",
+
               expiresAt: new Date(
-                Date.now() + 10 * 60 * 1000
+                Date.now() +
+                  10 * 60 * 1000
               ),
             },
           });
@@ -73,18 +121,77 @@ export async function POST(request: Request) {
         return reservation;
       });
 
-    return Response.json(reservation);
+    return NextResponse.json(
+      reservation
+    );
 
   } catch (error) {
 
+    console.error(error);
+
     const err = error as Error;
 
-    return Response.json(
+    // OUT OF STOCK
+
+    if (
+      err.message ===
+      "OUT_OF_STOCK"
+    ) {
+
+      return NextResponse.json(
+        {
+          error:
+            "Not enough stock available",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    // INVENTORY NOT FOUND
+
+    if (
+      err.message ===
+      "INVENTORY_NOT_FOUND"
+    ) {
+
+      return NextResponse.json(
+        {
+          error:
+            "Inventory not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    // RACE CONDITION
+
+    if (
+      err.message ===
+      "RACE_CONDITION"
+    ) {
+
+      return NextResponse.json(
+        {
+          error:
+            "Another user reserved the stock first. Try again.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    return NextResponse.json(
       {
-        error: err.message || "Something went wrong",
+        error:
+          "Failed to create reservation",
       },
       {
-        status: 400,
+        status: 500,
       }
     );
   }
